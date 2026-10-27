@@ -1,0 +1,9 @@
+openpyxl
+pandas
+python-docx
+PyYAML
+chardet
+google-auth
+google-api-python-client
+google-auth-oauthlib
+docxtopdf
