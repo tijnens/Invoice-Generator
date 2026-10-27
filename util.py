@@ -4,7 +4,8 @@ import uuid
 import pandas as pd
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 import chardet
 
@@ -50,14 +51,9 @@ def load_client_database(file_path):
         # client, and there are multiple clients with this first name, we need to inform the user that the script
         # cannot determine which client this event refers to.
         for c in client_data['clients'].values():
-            if name == c.first_name:
+            if name.casefold() == c.first_name.casefold():
                 client_data['duplicate_first_names'].add(c.full_name.lower())
                 client_data['duplicate_first_names'].add(full_name.lower())
-        # if any(name == c.first_name for c in client_data['clients'].values()):
-        #     # Add the full name of all clients with this first name to the duplicate names set
-        #     client_data['duplicate_first_names'].update(
-        #         [c.full_name.lower() for c in client_data['clients'][client.id]] + [full_name.lower()]
-        #     )
 
         # Also keep track of last names that are 'bellen'. A Google Calendar event title that ends with 'bellen' is
         # normally excluded from the invoice, because this indicates a free intro chat over the phone. If a client's
@@ -94,13 +90,13 @@ def validate_date_string(date_string, date_format):
 
 
 def transform_user_dates_to_google_calendar_api_dates(user_start_date, user_end_date):
-    # Transform from DD-MM-YYYY to YYYY-MM-DD
-    start_date = datetime.strptime(user_start_date, '%d-%m-%Y').strftime('%Y-%m-%d')
-    end_date = datetime.strptime(user_end_date, '%d-%m-%Y').strftime('%Y-%m-%d')
-    # Transform from YYYY-MM-DD to YYYY-MM-DD HH:MM:SSZ
-    start_date = datetime.strptime(f'{start_date} 00:00:00', "%Y-%m-%d %H:%M:%S").isoformat() + "Z"
-    end_date = datetime.strptime(f'{end_date} 23:59:59', "%Y-%m-%d %H:%M:%S").isoformat() + "Z"
-    return start_date, end_date
+    # Interpret user-selected calendar dates in the Netherlands, accounting for DST.
+    # Google Calendar's timeMax is exclusive, so use midnight after the end date.
+    local_tz = ZoneInfo("Europe/Amsterdam")
+    start_local = datetime.strptime(user_start_date, "%d-%m-%Y").replace(tzinfo=local_tz)
+    end_local = (datetime.strptime(user_end_date, "%d-%m-%Y") + timedelta(days=1)).replace(tzinfo=local_tz)
+    return (start_local.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
+            end_local.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"))
 
 
 @dataclass(slots=True)

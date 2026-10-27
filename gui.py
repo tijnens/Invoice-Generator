@@ -22,7 +22,6 @@ class InvoiceGenerator(tk.Tk):
         self.title(
             "Invoice Generator [DEMO MODE]" if self.demo else "Invoice Generator"
         )
-        self._cache_file_loc = os.path.join(self.app_data_loc, self.CACHE_FILE)
         self.invoice_date = datetime.now()
         self.default_dates = self._get_default_start_and_end_dates()
         if self.demo:
@@ -43,7 +42,8 @@ class InvoiceGenerator(tk.Tk):
         self.selected_csv_file_path_label = None
         self.process_button = None
         self._setup_app_data_dir()
-        self._read_from_cache()
+        if not self.demo:
+            self._read_from_cache()
         self._create_homescreen_widgets()
 
     @property
@@ -58,7 +58,7 @@ class InvoiceGenerator(tk.Tk):
         # If we're not on the last day of the current month, the default dates should be the start and end of the
         # previous month
         if self.invoice_date.month == (self.invoice_date + timedelta(days=1)).month:
-            year = self.invoice_date.year
+            year = self.invoice_date.year if self.invoice_date.month != 1 else self.invoice_date.year - 1
             month = self.invoice_date.month - 1 if self.invoice_date.month != 1 else 12
             start_day = 1
             # Subtract one day from the first day of the current month to get the last day of the previous month
@@ -77,11 +77,7 @@ class InvoiceGenerator(tk.Tk):
         """
         if app_data_loc is not None:
             self.app_data_loc = app_data_loc
-        if not os.path.exists(self.app_data_loc):
-            os.mkdir(self.app_data_loc)
-            if not os.path.exists(self.cache_file_loc):
-                with open(self.cache_file_loc, 'w') as f:
-                    yaml.dump({}, f)
+        os.makedirs(self.app_data_loc, exist_ok=True)
 
     def _load_cache(self):
         if os.path.exists(self.cache_file_loc):
@@ -190,6 +186,9 @@ class InvoiceGenerator(tk.Tk):
             valid_csv_selected = False
 
         # If valid:
+        if valid_dates and datetime.strptime(start_date, self.date_format) > datetime.strptime(end_date, self.date_format):
+            self.end_date_error.config(text="End date must not precede start date")
+            valid_dates = False
         if valid_dates and valid_csv_selected:
             self.start_date_error.config(text="")
             self.end_date_error.config(text="")
@@ -204,6 +203,8 @@ class InvoiceGenerator(tk.Tk):
             start_date, end_date = transform_user_dates_to_google_calendar_api_dates(start_date, end_date)
             billable_clients = pull_calendar_data(start_date, end_date, self.client_data, creds, demo=self.demo)
             self._create_tabbed_interface_for_consultations_per_client(billable_clients)
+            if not billable_clients:
+                messagebox.showinfo("Geen afspraken", "Geen factureerbare afspraken gevonden voor deze periode.")
 
     @staticmethod
     def create_single_consultation_string_for_checkbox(event: GoogleCalendarEvent, client: Client, match_type: str):
@@ -217,7 +218,7 @@ class InvoiceGenerator(tk.Tk):
             if self.tabs.tab(tab, "text") == 'Home':
                 continue
             self.tabs.forget(tab)
-        for client in sorted(billable_clients):
+        for client in sorted(billable_clients or []):
             tab = ttk.Frame(self.tabs)
             self.tabs.add(tab, text=client.full_name)
             instructions_label = tk.Label(
@@ -243,8 +244,9 @@ class InvoiceGenerator(tk.Tk):
                 chk.pack(side="left")
 
                 # Create a button to open the event in Google Calendar
-                link_button = ttk.Button(frame, text='Open in Calendar', command=lambda u=event.link: open_url(u))
-                link_button.pack(side='left', padx=(5, 0))
+                if not self.demo:
+                    link_button = ttk.Button(frame, text='Open in Calendar', command=lambda u=event.link: open_url(u))
+                    link_button.pack(side='left', padx=(5, 0))
 
                 checkbox_states.append((var, event))
 
@@ -284,6 +286,8 @@ class InvoiceGenerator(tk.Tk):
             initialfile=f"{client.full_name.replace(' ', '-')}_"
                         f"Factuur_{self.billed_month}_{self.invoice_date.year}.docx"
         )
+        if not file_path:
+            return
         self.generate_docx(client, checkbox_states, file_path)
         tk.messagebox.showinfo("", f"Bestand opgeslagen als {file_path}")
 
@@ -294,11 +298,15 @@ class InvoiceGenerator(tk.Tk):
             filetypes=[("PDF Documents", "*.pdf"), ("All Files", "*.*")],
             initialfile=file_name
         )
+        if not file_path:
+            return
         temp_docx_file_path = os.path.join(self.app_data_loc, file_name.replace('.pdf', '.docx'))
         self.generate_docx(client, checkbox_states, temp_docx_file_path)
-        convert(temp_docx_file_path, file_path)
-
-        os.remove(temp_docx_file_path)
+        try:
+            convert(temp_docx_file_path, file_path)
+        finally:
+            if os.path.exists(temp_docx_file_path):
+                os.remove(temp_docx_file_path)
 
         tk.messagebox.showinfo("", f"Bestand opgeslagen als {file_path}")
 
@@ -329,13 +337,15 @@ class InvoiceGenerator(tk.Tk):
         if file_path:  # Check if a file was selected
             self.client_data_csv_filepath = file_path
             self.selected_csv_file_path_label.config(text=file_path)  # Update label with file path
-            self._write_var_to_cache('client_data_csv_filepath', file_path)
+            if not self.demo:
+                self._write_var_to_cache('client_data_csv_filepath', file_path)
 
     def _load_selected_csv_file(self):
         # Read and process the CSV file
         try:
             self.client_data = load_client_database(self.client_data_csv_filepath)
         except Exception as e:
+            self.client_data = None
             messagebox.showerror("Error", f"An error occurred while reading the CSV file: {e}")
 
 

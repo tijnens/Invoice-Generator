@@ -2,6 +2,7 @@ import datetime
 import os.path
 import os
 import sys
+from pathlib import Path
 
 import google.auth.exceptions
 from docx import Document
@@ -225,9 +226,7 @@ def create_datetime_from_calendar_event_date(date_dict: dict) -> datetime:
     # If there's a 'dateTime' entry, this means a specific time was set for the event. This will be in %Y-%m-%dT%H:%M:%S
     # format
     if 'dateTime' in date_dict:
-        datetime_obj = datetime.datetime.strptime(
-            date_dict['dateTime'].replace('Z', '+00:00'), '%Y-%m-%dT%H:%M:%S%z'
-        )
+        datetime_obj = datetime.datetime.fromisoformat(date_dict['dateTime'].replace('Z', '+00:00'))
     # If no specific time was set for the event, it will be in %Y-%m-%d format
     else:
         datetime_obj = datetime.datetime.strptime(date_dict['date'], '%Y-%m-%d')
@@ -253,20 +252,31 @@ def pull_calendar_data(start_date, end_date, client_data, creds, demo=False):
         else:
             import json
 
-            with open(MOCK_CALENDAR_LOC, "r") as f:
+            mock_path = Path(base_path) / MOCK_CALENDAR_LOC
+            with mock_path.open("r", encoding="utf-8") as f:
                 events_result = json.load(f)
 
         events = events_result.get("items", [])
 
         if not events:
-            print("No upcoming events found.")
-            return
+            print("No calendar events found.")
+            return []
 
         billable_clients = []
 
+        # The real Google API filters server-side; demo data must be filtered locally.
+        from datetime import datetime as _datetime, timezone as _timezone
+        start_bound = _datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+        end_bound = _datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+
         for event in events:
+            if not event.get('summary'):
+                continue
             event_start, event_end = get_start_and_end_datetime_from_calendar_event(event)
-            event_object = GoogleCalendarEvent(title=event['summary'], id=event['id'], link=event['htmlLink'],
+            event_start_utc = event_start.replace(tzinfo=_timezone.utc) if event_start.tzinfo is None else event_start.astimezone(_timezone.utc)
+            if demo and not (start_bound <= event_start_utc < end_bound):
+                continue
+            event_object = GoogleCalendarEvent(title=event['summary'], id=event['id'], link=event.get('htmlLink', ''),
                                                start_date=event_start, end_date=event_end)
             matched_clients = match_event_title_to_client_names(event_object, client_data)
             billable_clients.extend([client for client in matched_clients if client not in billable_clients])
