@@ -14,7 +14,7 @@ from util import (load_client_database, open_url, validate_date_string, GoogleCa
 class InvoiceGenerator(tk.Tk):
     CACHE_VARS = ('client_data_csv_filepath',)
     CACHE_FILE = 'cache.yaml'
-    app_data_loc = os.path.join(os.getenv('APPDATA'), 'UurtjeFactuurtje')
+    app_data_loc = os.path.join(os.getenv('APPDATA'), 'InvoiceGenerator')
 
     def __init__(self, demo=False):
         super().__init__()
@@ -317,7 +317,7 @@ class InvoiceGenerator(tk.Tk):
 
                 # Convert to PDF
                 convert_docx_to_pdf(temp_docx_path, file_path)
-                
+
                 # Verify that the PDF exists
                 if not os.path.isfile(file_path):
                     raise RuntimeError(
