@@ -70,7 +70,7 @@ Normal mode requires an OAuth client configuration file named `credentials.json`
 
 ## Building an executable
 
-The original single-user application was also packaged for Windows using PyInstaller. The build configuration is not intended as a ready-to-distribute public release for reasons mentioned under [](#running-with-a-real-google-calendar). Building the executable therefore does not result in an out-of-the-box runnable app, but instructions are included here just to show that it is possible.
+The original single-user application was also packaged for Windows using PyInstaller. The build configuration is not intended as a ready-to-distribute public release for reasons mentioned under [Running with a real Google Calendar](#running-with-a-real-google-calendar). Building the executable therefore does not result in an out-of-the-box runnable app, but instructions are included here just to show that it is possible.
 
 ```powershell
 python -m pip install pyinstaller
