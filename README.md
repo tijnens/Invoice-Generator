@@ -1,4 +1,4 @@
-# Invoice Generator — Google Calendar Invoice Generator
+# Invoice Generator - Google Calendar Invoice Generator
 
 A Python desktop application that turns Google Calendar appointments into client invoices. It was originally developed to automate the monthly invoicing workflow of a single professional. This public portfolio version uses **fictional client and business information** and includes an **offline demo mode**.
 
