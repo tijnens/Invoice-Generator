@@ -82,17 +82,22 @@ python -m pytest -v
 
 ```text
 .
-├── gui.py                  # Tkinter GUI and user workflow
-├── calendar_processor.py   # Google Calendar retrieval, matching, invoice creation
-├── util.py                 # Client/event models, data loading, helpers
-├── constants.py            # Fictional invoice configuration and templates
+├── gui.py                  # Tkinter interface and invoice workflow
+├── calendar_processor.py   # Calendar API, client matching, DOCX generation
+├── pdf_converter.py        # DOCX-to-PDF conversion via Word COM automation
+├── util.py                 # Data models, CSV parsing, utility functions
+├── constants.py            # Invoice templates and configuration
 ├── demo/
 │   ├── clientsdata_demo.csv
-│   └── mock_calendar.json
-├── tests/                  # Automated pytest suite
+│   ├── mock_calendar.json
+│   └── example_invoice.pdf
+├── screenshots/
+│   └── appointments.png
+├── tests/                  # Automated pytest tests
 ├── requirements.txt
 ├── pytest.ini
-├── gui.spec                 # PyInstaller build configuration
+├── gui.spec                # PyInstaller configuration
+├── .gitignore
 └── README.md
 ```
 
