@@ -13,14 +13,6 @@ token.json
 **/token.json
 **/credentials.json
 
-# Real client records and invoices
-clientsdata.csv
-clients.csv
-*.docx
-*.pdf
-output/
-invoices/
-
 # Application cache and local settings
 cache.yaml
 cache_demo.yaml
