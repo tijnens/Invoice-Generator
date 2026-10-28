@@ -14,9 +14,16 @@ The application combines Google Calendar API integration, CSV-based client recor
 - **Invoice generation:** Calculate consultation charges from appointment duration and hourly rate; export invoices as DOCX or PDF.
 - **Offline demo:** Explore the workflow with fictional clients and mock calendar events, without Google login.
 
-<!-- ![Home screen](screenshots/home.png) -->
-<!-- ![Client tab](screenshots/client-tab.png) -->
-<!-- ![Warning message](screenshots/warning-message.png) -->
+## Screenshots
+
+Home screen:
+![Home screen](screenshots/home.png)
+
+Individual client tab after processing Calendar events:
+![Client tab](screenshots/client-tab.png)
+
+Example of a warning message in case multiple clients with the same first name exist:
+![Warning message](screenshots/warning-message.png)
 
 ## Quick start: offline demo
 
