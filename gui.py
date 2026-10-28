@@ -1,10 +1,10 @@
 import os
 import yaml
 import tkinter as tk
-from docxtopdf import convert
 from tkinter import ttk, filedialog, messagebox
 from datetime import datetime, timedelta
 
+from pdf_converter import convert_docx_to_pdf
 from constants import MONTH_NAMES_DUTCH, DEMO_CLIENTS_DATA_LOC
 from calendar_processor import pull_calendar_data, generate_invoice, check_credentials
 from util import (load_client_database, open_url, validate_date_string, GoogleCalendarEvent,
@@ -291,24 +291,49 @@ class InvoiceGenerator(tk.Tk):
         self.generate_docx(client, checkbox_states, file_path)
         tk.messagebox.showinfo("", f"Bestand opgeslagen als {file_path}")
 
-    def on_generate_pdf_button_click(self, client: Client, checkbox_states: list[tuple[tk.IntVar | GoogleCalendarEvent]]) -> None:
-        file_name = f"{client.full_name.replace(' ', '-')}_Factuur_{self.billed_month}_{self.invoice_date.year}.pdf"
+    def on_generate_pdf_button_click(self, client, checkbox_states):
+        file_name = (
+            f"{client.full_name.replace(' ', '-')}_"
+            f"Factuur_{self.billed_month}_{self.invoice_date.year}.pdf"
+        )
+
         file_path = filedialog.asksaveasfilename(
             defaultextension=".pdf",
-            filetypes=[("PDF Documents", "*.pdf"), ("All Files", "*.*")],
+            filetypes=[("PDF Documents", "*.pdf")],
             initialfile=file_name
         )
+
         if not file_path:
             return
-        temp_docx_file_path = os.path.join(self.app_data_loc, file_name.replace('.pdf', '.docx'))
-        self.generate_docx(client, checkbox_states, temp_docx_file_path)
-        try:
-            convert(temp_docx_file_path, file_path)
-        finally:
-            if os.path.exists(temp_docx_file_path):
-                os.remove(temp_docx_file_path)
 
-        tk.messagebox.showinfo("", f"Bestand opgeslagen als {file_path}")
+        import tempfile
+
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_docx_path = os.path.join(temp_dir, "invoice.docx")
+
+                # Generate the intermediate Word document
+                self.generate_docx(client, checkbox_states, temp_docx_path)
+
+                # Convert to PDF
+                convert_docx_to_pdf(temp_docx_path, file_path)
+                
+                # Verify that the PDF exists
+                if not os.path.isfile(file_path):
+                    raise RuntimeError(
+                        "PDF conversion completed without creating a file."
+                    )
+
+            messagebox.showinfo(
+                "Success",
+                f"Invoice saved successfully:\n{file_path}"
+            )
+
+        except Exception as e:
+            messagebox.showerror(
+                "PDF generation failed",
+                f"Could not generate PDF:\n\n{e}"
+            )
 
     def generate_docx(self, client: Client, checkbox_states: list[tuple[tk.IntVar | GoogleCalendarEvent]], file_path):
         # Use only the consultations that have their checkbox checked
